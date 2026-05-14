@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор личной инфляции - Росстат</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #ffffff; --bg-secondary: #f8fafc; --bg-card: #ffffff;
+            --accent-cyan: #06b6d4; --accent-lime: #84cc16; --accent-lime-dark: #65a30d;
+            --text-primary: #0f172a; --text-secondary: #475569; --text-muted: #94a3b8;
+            --border-color: #e2e8f0; --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);
+            --shadow-lg: 0 20px 25px -5px rgba(0,0,0,.1),0 10px 10px -5px rgba(0,0,0,.04);
+        }
+        body { font-family:'Inter',sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; overflow-x:hidden; }
+        .hero-section { min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; position:relative; overflow:hidden; background:linear-gradient(135deg,#fff 0%,#f0fdfa 50%,#ecfccb 100%); }
+        .bg-animation { position:absolute; width:100%; height:100%; top:0; left:0; overflow:hidden; z-index:0; }
+        .circle { position:absolute; border-radius:50%; opacity:.4; animation:float 20s infinite ease-in-out; }
+        .circle-1 { width:300px; height:300px; background:radial-gradient(circle,rgba(6,182,212,.3),transparent); top:10%; left:10%; animation-delay:0s; }
+        .circle-2 { width:400px; height:400px; background:radial-gradient(circle,rgba(132,204,22,.3),transparent); bottom:10%; right:10%; animation-delay:3s; }
+        .circle-3 { width:250px; height:250px; background:radial-gradient(circle,rgba(6,182,212,.2),transparent); top:50%; right:20%; animation-delay:6s; }
+        .circle-4 { width:350px; height:350px; background:radial-gradient(circle,rgba(132,204,22,.2),transparent); bottom:30%; left:15%; animation-delay:9s; }
+        @keyframes float { 0%,100%{transform:translate(0,0) scale(1)} 25%{transform:translate(30px,-30px) scale(1.1)} 50%{transform:translate(-20px,20px) scale(.9)} 75%{transform:translate(20px,30px) scale(1.05)} }
+        .particle { position:absolute; background:linear-gradient(135deg,var(--accent-cyan),var(--accent-lime)); border-radius:50%; opacity:.6; animation:particle-float 15s infinite ease-in-out; }
+        @keyframes particle-float { 0%,100%{transform:translateY(0) translateX(0);opacity:.6} 50%{transform:translateY(-100px) translateX(50px);opacity:.3} }
+        .hero-content { position:relative; z-index:1; text-align:center; padding:40px 20px; max-width:900px; width:100%; animation:fadeInUp 1s ease-out; }
+        .hero-title { font-size:clamp(2.5rem,8vw,6rem); font-weight:900; background:linear-gradient(135deg,var(--accent-cyan),var(--accent-lime)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:24px; letter-spacing:-2px; line-height:1.1; animation:slideInDown 1s ease-out; }
+        .hero-subtitle { font-size:clamp(1rem,3vw,1.8rem); color:var(--text-secondary); margin-bottom:48px; font-weight:500; animation:slideInUp 1s ease-out .2s backwards; }
+        .stats-preview { display:flex; justify-content:center; gap:clamp(16px,4vw,48px); margin-bottom:48px; flex-wrap:wrap; animation:fadeIn 1s ease-out .4s backwards; }
+        .stat-item-hero { text-align:center; }
+        .stat-number { font-size:clamp(2rem,6vw,3.5rem); font-weight:800; background:linear-gradient(135deg,var(--accent-cyan),var(--accent-lime)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; font-family:'Space Mono',monospace; display:block; }
+        .stat-label-hero { font-size:clamp(.75rem,2vw,1rem); color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:600; margin-top:8px; }
+        .cta-button { padding:16px 36px; font-size:clamp(1rem,3vw,1.2rem); font-weight:700; background:linear-gradient(135deg,var(--accent-cyan),var(--accent-lime)); color:#fff; border:none; border-radius:16px; cursor:pointer; transition:all .3s; box-shadow:0 10px 30px rgba(6,182,212,.3); animation:pulse-button 2s infinite,fadeIn 1s ease-out .6s backwards; font-family:'Inter',sans-serif; white-space:nowrap; }
+        .cta-button:hover { transform:translateY(-5px) scale(1.05); box-shadow:0 20px 40px rgba(6,182,212,.4); }
+        @keyframes pulse-button { 0%,100%{box-shadow:0 10px 30px rgba(6,182,212,.3)} 50%{box-shadow:0 10px 40px rgba(6,182,212,.5)} }
+        .scroll-indicator { position:absolute; bottom:40px; left:50%; transform:translateX(-50%); animation:bounce 2s infinite; opacity:.6; }
+        .scroll-indicator svg { width:30px; height:30px; stroke:var(--accent-cyan); stroke-width:2; }
+        @keyframes bounce { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(10px)} }
+        .calculator-section { min-height:100vh; padding:40px 16px; background:var(--bg-primary); opacity:0; transform:translateY(50px); transition:all .8s ease-out; }
+        .calculator-section.visible { opacity:1; transform:translateY(0); }
+        .container { max-width:1600px; margin:0 auto; position:relative; z-index:1; }
+        .header { display:flex; justify-content:space-between; align-items:flex-start; padding:20px 0; margin-bottom:24px; flex-wrap:wrap; gap:16px; }
+        .header-content h1 { font-size:clamp(1.5rem,4vw,3rem); font-weight:800; background:linear-gradient(135deg,var(--accent-cyan),var(--accent-lime)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:8px; letter-spacing:-1px; }
+        .subtitle { color:var(--text-secondary); font-size:clamp(.85rem,2vw,1.1rem); }
+        .controls-wrapper { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+        .year-range-selector { display:flex; align-items:center; gap:8px; background:var(--bg-secondary); border:2px solid var(--border-color); border-radius:12px; padding:8px 12px; flex-wrap:wrap; }
+        .year-range-label { font-size:.82rem; color:var(--text-secondary); font-weight:700; text-transform:uppercase; letter-spacing:.8px; }
+        .year-select { padding:6px 28px 6px 8px; background:var(--bg-card); border:2px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-weight:700; font-size:.9rem; cursor:pointer; transition:all .3s; font-family:'Space Mono',monospace; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; }
+        .year-select:hover { border-color:var(--accent-cyan); }
+        .year-select:focus { outline:none; border-color:var(--accent-lime); box-shadow:0 0 0 3px rgba(132,204,22,.15); }
+        .year-range-dash { font-weight:800; font-size:1.1rem; background:linear-gradient(135deg,var(--accent-cyan),var(--accent-lime)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .chart-bar-section { background:var(--bg-card); border:2px solid var(--border-color); border-radius:16px; padding:20px 16px 16px; margin-bottom:24px; box-shadow:var(--shadow); overflow-x:auto; }
+        .chart-bar-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px; }
+        .chart-bar-title { font-size:clamp(.85rem,2vw,1rem); font-weight:700; color:var(--text-primary); }
+        .chart-bar-legend { display:flex; gap:14px; flex-wrap:wrap; }
+        .legend-item { display:flex; align-items:center; gap:6px; font-size:.8rem; color:var(--text-secondary); font-weight:600; }
+        .legend-dot { width:12px; height:12px; border-radius:3px; }
+        .legend-dot.avg { background:var(--accent-cyan); }
+        .legend-dot.personal { background:var(--accent-lime); }
+        .bars-wrapper { display:flex; align-items:flex-end; gap:4px; height:100px; padding:0 2px; min-width:300px; }
+        .bar-col { flex:1; min-width:24px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:4px; }
+        .bar-group { display:flex; align-items:flex-end; gap:2px; height:72px; width:100%; }
+        .bar { flex:1; border-radius:4px 4px 0 0; transition:height .5s cubic-bezier(.4,0,.2,1); position:relative; }
+        .bar.avg-bar { background:var(--accent-cyan); }
+        .bar.personal-bar { background:var(--accent-lime); }
+        .bar-tooltip { position:absolute; top:-22px; left:50%; transform:translateX(-50%); font-size:.65rem; font-weight:700; color:var(--text-primary); white-space:nowrap; opacity:0; transition:opacity .2s; font-family:'Space Mono',monospace; }
+        .bar:hover .bar-tooltip { opacity:1; }
+        .bar-year-label { font-size:clamp(.55rem,1.2vw,.72rem); font-weight:700; color:var(--text-muted); font-family:'Space Mono',monospace; margin-top:2px; white-space:nowrap; }
+        .bar-year-label.preliminary { color:var(--warning); }
+        .lang-switcher { display:flex; gap:6px; background:var(--bg-secondary); border:2px solid var(--border-color); border-radius:12px; padding:5px; }
+        .lang-btn { padding:8px 16px; background:transparent; border:none; color:var(--text-secondary); cursor:pointer; border-radius:8px; font-weight:600; font-size:.9rem; transition:all .3s; font-family:'Inter',sans-serif; }
+        .lang-btn.active { background:linear-gradient(135deg,var(--accent-cyan),var(--accent-lime)); color:#fff; }
+        .lang-btn:hover:not(.active) { background:rgba(6,182,212,.1); color:var(--accent-cyan); }
+        .main-layout { display:grid; grid-template-columns:1fr 360px; gap:20px; margin-top:24px; }
+        .card { background:var(--bg-card); border:2px solid var(--border-color); border-radius:20px; padding:24px; box-shadow:var(--shadow-lg); }
+        .card-title { font-size:clamp(1.1rem,3vw,1.5rem); font-weight:700; margin-bottom:20px; color:var(--text-primary); }
+        .preliminary-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(245,158,11,.1); color:var(--warning); border:1px solid rgba(245,158,11,.3); border-radius:8px; padding:3px 10px; font-size:.78rem; font-weight:700; margin-left:8px; vertical-align:middle; }
+        .categories-container { max-height:70vh; overflow-y:auto; padding-right:6px; }
+        .categories-container::-webkit-scrollbar { width:6px; }
+        .categories-container::-webkit-scrollbar-track { background:var(--bg-secondary); border-radius:10px; }
+        .categories-container::-webkit-scrollbar-thumb { background:linear-gradient(180deg,var(--accent-cyan),var(--accent-lime)); border-radius:10px; }
+        .category-group { margin-bottom:12px; border:2px solid var(--border-color); border-radius:16px; overflow:hidden; transition:all .3s; background:var(--bg-card); }
+        .category-group:hover { border-color:var(--accent-cyan); box-shadow:var(--shadow); }
+        .category-header { display:flex; align-items:center; justify-content:space-between; padding:16px 18px; background:var(--bg-secondary); cursor:pointer; transition:all .3s; }
+        .category-header:hover { background:linear-gradient(135deg,rgba(6,182,212,.05),rgba(132,204,22,.05)); }
+        .category-header-left { display:flex; align-items:center; gap:12px; min-width:0; }
+        .category-icon { width:42px; height:42px; min-width:42px; background:linear-gradient(135deg,var(--accent-cyan),var(--accent-lime)); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; box-shadow:0 4px 12px rgba(6,182,212,.3); }
+        .category-info h3 { font-size:clamp(.9rem,2vw,1.1rem); font-weight:700; color:var(--text-primary); margin-bottom:4px; }
+        .category-avg-inflation { font-size:.85rem; font-family:'Space Mono',monospace; color:var(--accent-lime-dark); font-weight:600; }
+        .expand-icon { font-size:1.1rem; color:var(--accent-cyan); transition:transform .3s; font-weight:bold; flex-shrink:0; margin-left:8px; }
+        .category-group.expanded .expand-icon { transform:rotate(180deg); }
+        .subcategories { max-height:0; overflow:hidden; transition:max-height .4s ease-out; }
+        .category-group.expanded .subcategories { max-height:2000px; }
+        .subcategory-item { padding:14px 18px; border-top:1px solid var(--border-color); transition:all .3s; display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--bg-card); flex-wrap:wrap; }
+        .subcategory-item:hover { background:linear-gradient(135deg,rgba(6,182,212,.03),rgba(132,204,22,.03)); }
+        .subcategory-info { flex:1; min-width:140px; }
+        .subcategory-name { font-size:.9rem; font-weight:600; color:var(--text-primary); margin-bottom:5px; }
+        .subcategory-inflation { font-size:.82rem; font-family:'Space Mono',monospace; display:inline-block; padding:3px 10px; border-radius:8px; font-weight:700; }
+        .inflation-high { background:rgba(239,68,68,.1); color:var(--danger); border:1px solid rgba(239,68,68,.2); }
+        .inflation-medium { background:rgba(245,158,11,.1); color:var(--warning); border:1px solid rgba(245,158,11,.2); }
+        .inflation-low { background:rgba(16,185,129,.1); color:var(--success); border:1px solid rgba(16,185,129,.2); }
+        .inflation-deflation { background:rgba(6,182,212,.1); color:var(--accent-cyan); border:1px solid rgba(6,182,212,.3); }
+        .weight-control { display:flex; align-items:center; gap:10px; min-width:120px; }
+        .weight-input-wrapper { position:relative; flex:1; }
+        .weight-input { width:100%; padding:9px 30px 9px 10px; background:var(--bg-secondary); border:2px solid var(--border-color); border-radius:10px; color:var(--text-primary); font-family:'Space Mono',monospace; font-size:.88rem; text-align:right; font-weight:600; }
+        .weight-input:focus { outline:none; border-color:var(--accent-cyan); box-shadow:0 0 0 3px rgba(6,182,212,.1); }
+        .currency-sign { position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:.82rem; pointer-events:none; font-weight:600; }
+        .result-section { position:sticky; top:20px; }
+        .result-display { text-align:center; padding:24px 18px 20px; background:linear-gradient(135deg,rgba(6,182,212,.06),rgba(132,204,22,.06)); border-radius:20px; margin-bottom:16px; border:2px solid var(--border-color); }
+        .result-label { font-size:.78rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:2px; margin-bottom:8px; font-weight:700; }
+        .result-value { font-size:clamp(3rem,8vw,4.2rem); font-weight:900; background:linear-gradient(135deg,var(--accent-cyan),var(--accent-lime)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; font-family:'Space Mono',monospace; line-height:1; margin-bottom:8px; }
+        .result-comparison { font-size:.9rem; color:var(--text-secondary); font-weight:600; }
+        .snapshot-row { display:flex; justify-content:center; gap:20px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border-color); }
+        .snapshot-item { text-align:center; }
+        .snapshot-val { font-size:1.1rem; font-weight:800; font-family:'Space Mono',monospace; color:var(--text-primary); }
+        .snapshot-val.cyan { color:var(--accent-cyan); }
+        .snapshot-val.lime { color:var(--accent-lime-dark); }
+        .snapshot-lbl { font-size:.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.8px; font-weight:600; margin-top:3px; }
+        .stats-grid { display:grid; gap:10px; margin-bottom:20px; }
+        .stat-item { display:flex; justify-content:space-between; align-items:center; padding:13px 16px; background:var(--bg-secondary); border:2px solid var(--border-color); border-radius:12px; transition:all .3s; }
+        .stat-item:hover { border-color:var(--accent-cyan); transform:translateX(3px); }
+        .stat-label { color:var(--text-secondary); font-size:.88rem; font-weight:600; }
+        .stat-value { font-weight:800; font-family:'Space Mono',monospace; background:linear-gradient(135deg,var(--accent-cyan),var(--accent-lime)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; font-size:1.1rem; }
+        .actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+        .btn { padding:14px 20px; border:none; border-radius:12px; font-weight:700; font-size:.9rem; cursor:pointer; transition:all .3s; font-family:'Inter',sans-serif; }
+        .btn-primary { background:linear-gradient(135deg,var(--accent-cyan),var(--accent-lime)); color:#fff; box-shadow:0 4px 12px rgba(6,182,212,.3); }
+        .btn-primary:hover { transform:translateY(-3px); box-shadow:0 8px 20px rgba(6,182,212,.4); }
+        .btn-secondary { background:var(--bg-secondary); border:2px solid var(--border-color); color:var(--text-primary); }
+        .btn-secondary:hover { background:linear-gradient(135deg,rgba(6,182,212,.05),rgba(132,204,22,.05)); border-color:var(--accent-cyan); }
+        .reference-section { margin-top:20px; }
+        .reference-item { background:var(--bg-secondary); border:2px solid var(--border-color); border-radius:12px; padding:16px; margin-bottom:10px; cursor:pointer; transition:all .3s; }
+        .reference-item:hover { border-color:var(--accent-lime); box-shadow:var(--shadow); }
+        .reference-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+        .reference-title { font-size:.95rem; font-weight:700; color:var(--accent-lime-dark); }
+        .reference-content { max-height:0; overflow:hidden; transition:max-height .3s ease-out; color:var(--text-secondary); font-size:.88rem; line-height:1.7; }
+        .reference-item.expanded .reference-content { max-height:500px; margin-top:10px; }
+        .reference-item.expanded .expand-icon { transform:rotate(180deg); }
+        footer { text-align:center; margin-top:48px; padding:32px 0; color:var(--text-muted); font-size:.88rem; border-top:2px solid var(--border-color); }
+        .preliminary-notice { background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.3); border-radius:10px; padding:10px 14px; margin-bottom:16px; font-size:.83rem; color:#92400e; font-weight:600; }
+        @keyframes fadeInUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes slideInDown { from{opacity:0;transform:translateY(-50px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes slideInUp { from{opacity:0;transform:translateY(50px)} to{opacity:1;transform:translateY(0)} }
+        @media(max-width:1100px) { .main-layout{grid-template-columns:1fr} .result-section{position:static} }
+        @media(max-width:768px) { .calculator-section{padding:24px 12px} .header{flex-direction:column;gap:14px} .controls-wrapper{width:100%;flex-direction:column;align-items:stretch} .year-range-selector{justify-content:center} .lang-switcher{justify-content:center} .categories-container{max-height:none} .subcategory-item{flex-direction:column;align-items:flex-start} .weight-control{width:100%} .weight-input-wrapper{width:100%} .actions{grid-template-columns:1fr} .card{padding:16px} .chart-bar-section{padding:14px 10px} .result-value{font-size:2.8rem} .snapshot-row{gap:12px} }
+        @media(max-width:480px) { .hero-title{letter-spacing:-1px} .stats-preview{gap:12px} .stat-number{font-size:2rem} .cta-button{padding:14px 28px} .category-header{padding:12px 14px} .category-icon{width:36px;height:36px;min-width:36px;font-size:1.1rem} }
+    </style>
+</head>
+<body>
+
+<section class="hero-section" id="heroSection">
+    <div class="bg-animation">
+        <div class="circle circle-1"></div><div class="circle circle-2"></div>
+        <div class="circle circle-3"></div><div class="circle circle-4"></div>
+    </div>
+    <div class="hero-content">
+        <h1 class="hero-title" data-lang-key="heroTitle">Личная Инфляция</h1>
+        <p class="hero-subtitle" data-lang-key="heroSubtitle">Узнайте, как изменение цен влияет именно на ваш бюджет</p>
+        <div class="stats-preview">
+            <div class="stat-item-hero"><span class="stat-number">50+</span><span class="stat-label-hero" data-lang-key="heroStat1">Товаров</span></div>
+            <div class="stat-item-hero"><span class="stat-number">12</span><span class="stat-label-hero" data-lang-key="heroStat2">Категорий</span></div>
+            <div class="stat-item-hero"><span class="stat-number">5.9%</span><span class="stat-label-hero" data-lang-key="heroStat3">Инфляция I кв. 2026</span></div>
+        </div>
+        <button class="cta-button" onclick="scrollToCalculator()" data-lang-key="heroButton">Рассчитать мою инфляцию</button>
+    </div>
+    <div class="scroll-indicator">
+        <svg fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+    </div>
+</section>
+
+<section class="calculator-section" id="calculatorSection">
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1 data-lang-key="title">Калькулятор личной инфляции</h1>
+                <p class="subtitle" data-lang-key="subtitle">Рассчитайте вашу персональную инфляцию на основе данных Росстата</p>
+            </div>
+            <div class="controls-wrapper">
+                <div class="year-range-selector">
+                    <span class="year-range-label" data-lang-key="yearFrom">От</span>
+                    <select class="year-select" id="yearFrom" onchange="onRangeChange()"></select>
+                    <span class="year-range-dash">—</span>
+                    <select class="year-select" id="yearTo" onchange="onRangeChange()"></select>
+                </div>
+                <div class="lang-switcher">
+                    <button class="lang-btn active" onclick="setLanguage('ru',event)">RU</button>
+                    <button class="lang-btn" onclick="setLanguage('en',event)">EN</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="preliminaryNotice" class="preliminary-notice" style="display:none"></div>
+
+        <div class="chart-bar-section" id="chartBarSection">
+            <div class="chart-bar-header">
+                <span class="chart-bar-title" data-lang-key="chartTitle">Динамика инфляции по годам</span>
+                <div class="chart-bar-legend">
+                    <div class="legend-item"><div class="legend-dot avg"></div><span data-lang-key="legendAvg">Средняя</span></div>
+                    <div class="legend-item"><div class="legend-dot personal"></div><span data-lang-key="legendPersonal">Ваша</span></div>
+                </div>
+            </div>
+            <div class="bars-wrapper" id="barsWrapper"></div>
+        </div>
+
+        <div class="main-layout">
+            <div class="card">
+                <h2 class="card-title" data-lang-key="selectCategories">Выберите товары и услуги</h2>
+                <div class="categories-container" id="categoriesContainer"></div>
+            </div>
+            <div class="result-section">
+                <div class="card">
+                    <h2 class="card-title" data-lang-key="yourInflation">Ваша личная инфляция</h2>
+                    <div class="result-display">
+                        <div class="result-label" data-lang-key="totalInflationLabel">Суммарная инфляция за период</div>
+                        <div class="result-value" id="personalInflation">0.0%</div>
+                        <div class="result-comparison" id="comparisonText">—</div>
+                        <div class="snapshot-row">
+                            <div class="snapshot-item">
+                                <div class="snapshot-val cyan" id="avgCumulativeVal">0.0%</div>
+                                <div class="snapshot-lbl" data-lang-key="avgCumLabel">Средняя Россия</div>
+                            </div>
+                            <div class="snapshot-item">
+                                <div class="snapshot-val lime" id="personalCumulativeVal">0.0%</div>
+                                <div class="snapshot-lbl" data-lang-key="persCumLabel">Ваша</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-item"><span class="stat-label" data-lang-key="lastYearLabel">Посл. период (ваша)</span><span class="stat-value" id="lastYearPersonalVal">0%</span></div>
+                        <div class="stat-item"><span class="stat-label" data-lang-key="avgLastYear">Посл. период (Россия)</span><span class="stat-value" id="avgRussiaValue">5.9%</span></div>
+                        <div class="stat-item"><span class="stat-label" data-lang-key="periodLabel">Период</span><span class="stat-value" id="periodValue">2026</span></div>
+                        <div class="stat-item"><span class="stat-label" data-lang-key="totalWeight">Общий бюджет</span><span class="stat-value" id="totalWeight">0 ₽</span></div>
+                        <div class="stat-item"><span class="stat-label" data-lang-key="itemsSelected">Выбрано товаров</span><span class="stat-value" id="itemsSelected">0</span></div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-primary" onclick="resetWeights()" data-lang-key="reset">Сбросить</button>
+                        <button class="btn btn-secondary" onclick="shareResults()" data-lang-key="share">Поделиться</button>
+                    </div>
+                    <div class="reference-section">
+                        <h3 class="card-title" data-lang-key="reference">Справочные материалы</h3>
+                        <div id="referenceContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p data-lang-key="footerData">Данные основаны на официальной статистике Федеральной службы государственной статистики (Росстат)</p>
+            <p style="margin-top:8px;opacity:.6;" data-lang-key="footerUpdated">Обновлено: Май 2026. Данные за 2026 г. — предварительные (январь–апрель, Росстат).</p>
+        </footer>
+    </div>
+</section>
+
+<script>
+let currentLang = 'ru';
+let amounts = {};
+let yearFrom = 2010;
+let yearTo   = 2026;
+// 2026 — год ещё не завершён, данные предварительные
+const PRELIMINARY_YEAR = 2026;
+const ALL_YEARS = [2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025,2026];
+
+function getTotalBudget() { return Object.values(amounts).reduce((s,v)=>s+v,0); }
+
+function populateSelects() {
+    const fromEl = document.getElementById('yearFrom');
+    const toEl   = document.getElementById('yearTo');
+    fromEl.innerHTML = toEl.innerHTML = '';
+    ALL_YEARS.forEach(y => {
+        const label = y === PRELIMINARY_YEAR ? `${y}*` : String(y);
+        fromEl.innerHTML += `<option value="${y}"${y===yearFrom?' selected':''}>${label}</option>`;
+        toEl.innerHTML   += `<option value="${y}"${y===yearTo  ?' selected':''}>${label}</option>`;
+    });
+}
+
+function onRangeChange() {
+    let f = parseInt(document.getElementById('yearFrom').value);
+    let t = parseInt(document.getElementById('yearTo').value);
+    if (f>t){[f,t]=[t,f];document.getElementById('yearFrom').value=f;document.getElementById('yearTo').value=t;}
+    yearFrom=f; yearTo=t;
+    updatePreliminaryNotice();
+    renderCategories();
+    calculatePersonalInflation();
+    renderBars();
+}
+
+function updatePreliminaryNotice() {
+    const el = document.getElementById('preliminaryNotice');
+    const hasPrelim = yearTo >= PRELIMINARY_YEAR || yearFrom >= PRELIMINARY_YEAR;
+    if (hasPrelim) {
+        el.style.display = 'block';
+        el.textContent = currentLang === 'ru'
+            ? '⚠ Данные за 2026 год предварительные — по итогам января–апреля 2026 г. (Росстат, ЦБ РФ). Годовая инфляция указана в годовом исчислении (г/г).'
+            : '⚠ 2026 data is preliminary — January–April 2026 (Rosstat, Bank of Russia). Annual inflation shown year-over-year.';
+    } else {
+        el.style.display = 'none';
+    }
+}
+
+function calcPersonalForYear(y) {
+    const yd = inflationDataByYear[y];
+    const totalBudget = getTotalBudget();
+    if (totalBudget===0) return 0;
+    let wi = 0;
+    categories.forEach(cat => {
+        const cyd = yd[cat.id];
+        cat.subcategories.forEach(sub => {
+            const amt = amounts[`${cat.id}-${sub.id}`] || 0;
+            if (amt>0) wi += (amt/totalBudget)*cyd.subcategories[sub.id];
+        });
+    });
+    return wi;
+}
+
+function renderBars() {
+    const wrapper = document.getElementById('barsWrapper');
+    wrapper.innerHTML = '';
+    const years = ALL_YEARS.filter(y=>y>=yearFrom&&y<=yearTo);
+    let maxVal = 0;
+    years.forEach(y=>{
+        const a=inflationDataByYear[y].avgInflation;
+        const p=calcPersonalForYear(y);
+        if(a>maxVal)maxVal=a;
+        if(p>maxVal)maxVal=p;
+    });
+    if(maxVal===0)maxVal=20;
+    years.forEach(y=>{
+        const avg=inflationDataByYear[y].avgInflation;
+        const per=calcPersonalForYear(y);
+        const hA=Math.max((avg/maxVal)*68,3);
+        const hP=Math.max((Math.abs(per)/maxVal)*68,2);
+        const isPrelim = y===PRELIMINARY_YEAR;
+        const labelClass = isPrelim ? 'bar-year-label preliminary' : 'bar-year-label';
+        const yearLabel = isPrelim ? `${y}*` : String(y);
+        wrapper.innerHTML += `
+            <div class="bar-col">
+                <div class="bar-group">
+                    <div class="bar avg-bar" style="height:${hA}px${isPrelim?';opacity:.75':''}">
+                        <div class="bar-tooltip">${avg}%${isPrelim?' *':''}</div>
+                    </div>
+                    <div class="bar personal-bar" style="height:${hP}px;opacity:${per<0?'0.5':isPrelim?'0.75':'1'}">
+                        <div class="bar-tooltip">${per.toFixed(1)}%${isPrelim?' *':''}</div>
+                    </div>
+                </div>
+                <div class="${labelClass}">${yearLabel}</div>
+            </div>`;
+    });
+}
+
+// ===== ДАННЫЕ =====
+// Источники:
+// 2025: Росстат, декабрь 2025 к декабрю 2024. Общая: 5.59%.
+// 2026: Росстат / ЦБ РФ. Данные предварительные — годовая инфляция в годовом исчислении (г/г).
+//   Январь: 6.00% г/г; Февраль: 5.91% г/г; Март: 5.87% г/г (Росстат, inflationru.ru).
+//   Используется оценка за I кв. 2026 как базовый ориентир (~5.9% г/г).
+//   Продовольствие: +5.4% г/г (январь), фрукты/овощи +7.4% г/г (март), яйца и молоко снижаются.
+//   Непродовольственные: +3.2% г/г (январь), бензин +2.3% г/г (март).
+//   Услуги: +9.9% г/г (январь), туризм +12.85% м/м (февраль), ЖКУ +5.1% г/г (март).
+//   Источники: Росстат (rosstat.gov.ru), ЦБ РФ, SberCIB Research, Trading Economics.
+
+const inflationDataByYear = {
+    2010:{avgInflation:8.8,food:{avgInflation:12.9,subcategories:{bread:14.2,meat:11.8,fish:13.5,milk:13.1,eggs:16.8,oil:12.4,fruits:10.5,vegetables:11.2,sugar:15.3,pasta:13.6}},alcohol:{avgInflation:8.5,subcategories:{vodka:8.2,wine:9.1,beer:8.3,cigarettes:8.8}},clothing:{avgInflation:4.2,subcategories:{outer_wear:4.8,underwear:3.5,shoes:4.6,accessories:3.9}},housing:{avgInflation:12.2,subcategories:{rent:10.5,electricity:13.0,gas:14.0,water:12.5,heating:13.5,maintenance:11.0}},furniture:{avgInflation:5.1,subcategories:{furniture:5.5,appliances:4.6,tableware:5.2,textile:5.4}},health:{avgInflation:8.8,subcategories:{medicines:9.6,medical_services:8.5,dental:9.1,medical_devices:7.8}},transport:{avgInflation:9.5,subcategories:{cars:6.8,fuel:9.2,public_transport:14.0,taxi:8.1,car_parts:7.8,car_service:7.2}},communication:{avgInflation:2.8,subcategories:{mobile:2.3,internet:3.1,tv:3.2,phones:2.5}},recreation:{avgInflation:6.5,subcategories:{cinema:7.2,theater:6.1,sports:7.5,books:5.8,tourism:8.1}},education:{avgInflation:9.4,subcategories:{preschool:10.2,school:8.5,university:10.5,courses:8.8}},restaurants:{avgInflation:9.8,subcategories:{restaurants:10.5,cafes:9.2,fast_food:10.8,hotels:9.6}},other:{avgInflation:5.5,subcategories:{banking:4.6,insurance:5.8,beauty:8.0,jewelry:5.1}}},
+    2011:{avgInflation:6.1,food:{avgInflation:8.0,subcategories:{bread:9.5,meat:7.2,fish:8.5,milk:8.0,eggs:10.0,oil:20.0,fruits:6.0,vegetables:5.5,sugar:-23.0,pasta:9.0}},alcohol:{avgInflation:8.0,subcategories:{vodka:7.5,wine:8.5,beer:8.0,cigarettes:10.0}},clothing:{avgInflation:4.0,subcategories:{outer_wear:4.5,underwear:3.5,shoes:4.2,accessories:3.8}},housing:{avgInflation:11.4,subcategories:{rent:9.5,electricity:12.0,gas:13.0,water:11.5,heating:12.5,maintenance:10.0}},furniture:{avgInflation:5.3,subcategories:{furniture:5.8,appliances:4.8,tableware:5.3,textile:5.5}},health:{avgInflation:8.5,subcategories:{medicines:9.4,medical_services:8.2,dental:8.8,medical_devices:7.5}},transport:{avgInflation:9.1,subcategories:{cars:5.0,fuel:14.8,public_transport:14.0,taxi:8.0,car_parts:7.5,car_service:7.0}},communication:{avgInflation:2.4,subcategories:{mobile:2.0,internet:2.7,tv:2.8,phones:2.2}},recreation:{avgInflation:5.5,subcategories:{cinema:6.0,theater:5.2,sports:6.5,books:4.8,tourism:7.0}},education:{avgInflation:8.8,subcategories:{preschool:9.5,school:8.0,university:9.8,courses:8.2}},restaurants:{avgInflation:8.0,subcategories:{restaurants:8.5,cafes:7.5,fast_food:8.8,hotels:7.8}},other:{avgInflation:5.0,subcategories:{banking:4.2,insurance:5.3,beauty:7.0,jewelry:4.7}}},
+    2012:{avgInflation:6.6,food:{avgInflation:7.5,subcategories:{bread:9.0,meat:6.5,fish:7.8,milk:7.2,eggs:5.5,oil:10.0,fruits:6.0,vegetables:5.0,sugar:-0.5,pasta:8.0}},alcohol:{avgInflation:7.5,subcategories:{vodka:7.0,wine:8.0,beer:7.5,cigarettes:12.0}},clothing:{avgInflation:4.2,subcategories:{outer_wear:4.8,underwear:3.6,shoes:4.5,accessories:3.9}},housing:{avgInflation:9.5,subcategories:{rent:8.0,electricity:10.0,gas:11.0,water:9.5,heating:10.5,maintenance:8.5}},furniture:{avgInflation:5.5,subcategories:{furniture:6.0,appliances:5.0,tableware:5.5,textile:5.8}},health:{avgInflation:7.5,subcategories:{medicines:8.5,medical_services:7.2,dental:7.8,medical_devices:6.5}},transport:{avgInflation:7.2,subcategories:{cars:5.2,fuel:5.9,public_transport:13.0,taxi:7.5,car_parts:7.0,car_service:6.5}},communication:{avgInflation:2.0,subcategories:{mobile:1.7,internet:2.3,tv:2.5,phones:1.8}},recreation:{avgInflation:5.8,subcategories:{cinema:6.3,theater:5.5,sports:6.8,books:5.0,tourism:7.2}},education:{avgInflation:9.2,subcategories:{preschool:10.0,school:8.5,university:10.2,courses:8.8}},restaurants:{avgInflation:7.5,subcategories:{restaurants:8.0,cafes:7.0,fast_food:8.3,hotels:7.3}},other:{avgInflation:5.2,subcategories:{banking:4.4,insurance:5.5,beauty:7.5,jewelry:4.9}}},
+    2013:{avgInflation:6.5,food:{avgInflation:7.3,subcategories:{bread:8.5,meat:6.8,fish:7.5,milk:7.0,eggs:10.0,oil:5.5,fruits:6.5,vegetables:5.8,sugar:-0.3,pasta:7.8}},alcohol:{avgInflation:8.0,subcategories:{vodka:7.5,wine:8.5,beer:8.0,cigarettes:14.0}},clothing:{avgInflation:4.5,subcategories:{outer_wear:5.0,underwear:3.9,shoes:4.8,accessories:4.2}},housing:{avgInflation:9.8,subcategories:{rent:8.5,electricity:10.5,gas:11.5,water:10.0,heating:11.0,maintenance:9.0}},furniture:{avgInflation:5.8,subcategories:{furniture:6.3,appliances:5.2,tableware:5.8,textile:6.0}},health:{avgInflation:8.0,subcategories:{medicines:9.0,medical_services:7.7,dental:8.3,medical_devices:7.0}},transport:{avgInflation:6.8,subcategories:{cars:5.5,fuel:5.7,public_transport:11.0,taxi:7.5,car_parts:7.0,car_service:6.5}},communication:{avgInflation:2.1,subcategories:{mobile:1.8,internet:2.4,tv:2.6,phones:1.9}},recreation:{avgInflation:6.0,subcategories:{cinema:6.5,theater:5.7,sports:7.0,books:5.2,tourism:7.5}},education:{avgInflation:9.8,subcategories:{preschool:10.5,school:9.0,university:10.8,courses:9.2}},restaurants:{avgInflation:7.8,subcategories:{restaurants:8.3,cafes:7.3,fast_food:8.6,hotels:7.6}},other:{avgInflation:5.5,subcategories:{banking:4.7,insurance:5.8,beauty:8.0,jewelry:5.2}}},
+    2014:{avgInflation:11.4,food:{avgInflation:15.4,subcategories:{bread:14.0,meat:17.0,fish:18.0,milk:14.5,eggs:13.8,oil:19.0,fruits:14.0,vegetables:12.0,sugar:9.5,pasta:13.5}},alcohol:{avgInflation:9.0,subcategories:{vodka:8.5,wine:9.5,beer:9.0,cigarettes:18.0}},clothing:{avgInflation:7.8,subcategories:{outer_wear:8.8,underwear:6.8,shoes:8.5,accessories:7.2}},housing:{avgInflation:9.8,subcategories:{rent:8.5,electricity:10.5,gas:11.5,water:10.0,heating:11.0,maintenance:9.0}},furniture:{avgInflation:10.5,subcategories:{furniture:11.5,appliances:9.5,tableware:10.5,textile:11.0}},health:{avgInflation:13.5,subcategories:{medicines:15.0,medical_services:13.0,dental:14.0,medical_devices:12.0}},transport:{avgInflation:8.8,subcategories:{cars:7.0,fuel:9.2,public_transport:12.0,taxi:9.0,car_parts:8.5,car_service:8.0}},communication:{avgInflation:3.5,subcategories:{mobile:3.0,internet:4.0,tv:4.2,phones:3.2}},recreation:{avgInflation:8.5,subcategories:{cinema:9.0,theater:8.0,sports:9.5,books:7.5,tourism:10.0}},education:{avgInflation:9.5,subcategories:{preschool:10.2,school:8.8,university:10.5,courses:9.0}},restaurants:{avgInflation:10.5,subcategories:{restaurants:11.0,cafes:10.0,fast_food:11.5,hotels:10.2}},other:{avgInflation:7.5,subcategories:{banking:6.5,insurance:8.0,beauty:9.5,jewelry:7.0}}},
+    2015:{avgInflation:12.9,food:{avgInflation:14.0,subcategories:{bread:14.0,meat:14.5,fish:20.5,milk:12.5,eggs:12.8,oil:20.0,fruits:14.0,vegetables:17.0,sugar:40.0,pasta:16.5}},alcohol:{avgInflation:16.0,subcategories:{vodka:15.5,wine:17.0,beer:16.0,cigarettes:20.0}},clothing:{avgInflation:12.5,subcategories:{outer_wear:14.0,underwear:11.0,shoes:13.5,accessories:11.5}},housing:{avgInflation:10.2,subcategories:{rent:9.0,electricity:11.0,gas:12.0,water:10.5,heating:11.5,maintenance:9.5}},furniture:{avgInflation:16.0,subcategories:{furniture:17.5,appliances:14.5,tableware:16.0,textile:16.8}},health:{avgInflation:18.5,subcategories:{medicines:23.6,medical_services:17.0,dental:18.5,medical_devices:15.5}},transport:{avgInflation:12.5,subcategories:{cars:18.5,fuel:5.0,public_transport:13.0,taxi:11.0,car_parts:20.0,car_service:12.0}},communication:{avgInflation:8.0,subcategories:{mobile:7.0,internet:8.5,tv:9.0,phones:7.5}},recreation:{avgInflation:12.0,subcategories:{cinema:13.0,theater:11.5,sports:13.5,books:10.5,tourism:14.5}},education:{avgInflation:9.5,subcategories:{preschool:10.2,school:8.8,university:10.5,courses:9.0}},restaurants:{avgInflation:14.5,subcategories:{restaurants:15.5,cafes:13.8,fast_food:15.8,hotels:14.0}},other:{avgInflation:10.5,subcategories:{banking:9.0,insurance:11.0,beauty:12.5,jewelry:9.8}}},
+    2016:{avgInflation:5.4,food:{avgInflation:4.6,subcategories:{bread:6.0,meat:4.0,fish:8.5,milk:4.0,eggs:6.5,oil:-2.0,fruits:4.5,vegetables:-3.0,sugar:-17.0,pasta:5.5}},alcohol:{avgInflation:8.0,subcategories:{vodka:7.5,wine:8.5,beer:8.0,cigarettes:13.0}},clothing:{avgInflation:6.5,subcategories:{outer_wear:7.2,underwear:5.8,shoes:7.0,accessories:6.0}},housing:{avgInflation:5.4,subcategories:{rent:4.5,electricity:5.8,gas:6.5,water:5.5,heating:6.0,maintenance:5.0}},furniture:{avgInflation:7.0,subcategories:{furniture:7.8,appliances:6.2,tableware:7.0,textile:7.3}},health:{avgInflation:10.0,subcategories:{medicines:13.7,medical_services:9.0,dental:10.0,medical_devices:8.0}},transport:{avgInflation:6.5,subcategories:{cars:5.5,fuel:3.0,public_transport:11.5,taxi:6.0,car_parts:7.0,car_service:6.5}},communication:{avgInflation:3.5,subcategories:{mobile:3.0,internet:4.0,tv:4.2,phones:3.2}},recreation:{avgInflation:5.5,subcategories:{cinema:6.0,theater:5.2,sports:6.5,books:4.8,tourism:7.0}},education:{avgInflation:8.5,subcategories:{preschool:9.2,school:7.8,university:9.5,courses:8.0}},restaurants:{avgInflation:7.5,subcategories:{restaurants:8.0,cafes:7.0,fast_food:8.3,hotels:7.3}},other:{avgInflation:5.5,subcategories:{banking:4.7,insurance:5.8,beauty:8.0,jewelry:5.2}}},
+    2017:{avgInflation:2.5,food:{avgInflation:1.1,subcategories:{bread:3.0,meat:2.0,fish:2.5,milk:3.5,eggs:-13.0,oil:12.5,fruits:-1.0,vegetables:-18.0,sugar:18.0,pasta:3.0}},alcohol:{avgInflation:6.5,subcategories:{vodka:6.0,wine:7.0,beer:6.5,cigarettes:11.0}},clothing:{avgInflation:3.0,subcategories:{outer_wear:3.5,underwear:2.5,shoes:3.2,accessories:2.8}},housing:{avgInflation:4.2,subcategories:{rent:3.5,electricity:4.5,gas:5.0,water:4.3,heating:4.7,maintenance:4.0}},furniture:{avgInflation:3.5,subcategories:{furniture:4.0,appliances:3.0,tableware:3.5,textile:3.7}},health:{avgInflation:5.5,subcategories:{medicines:7.6,medical_services:5.0,dental:5.5,medical_devices:4.5}},transport:{avgInflation:3.0,subcategories:{cars:2.5,fuel:5.0,public_transport:5.0,taxi:3.0,car_parts:3.0,car_service:3.0}},communication:{avgInflation:1.5,subcategories:{mobile:1.2,internet:1.8,tv:2.0,phones:1.3}},recreation:{avgInflation:3.0,subcategories:{cinema:3.5,theater:2.8,sports:3.8,books:2.5,tourism:4.2}},education:{avgInflation:6.0,subcategories:{preschool:6.5,school:5.5,university:6.8,courses:5.8}},restaurants:{avgInflation:5.0,subcategories:{restaurants:5.5,cafes:4.7,fast_food:5.8,hotels:4.9}},other:{avgInflation:3.0,subcategories:{banking:2.5,insurance:3.2,beauty:5.0,jewelry:2.8}}},
+    2018:{avgInflation:4.3,food:{avgInflation:4.7,subcategories:{bread:4.0,meat:5.0,fish:4.5,milk:4.5,eggs:3.0,oil:13.0,fruits:4.0,vegetables:3.5,sugar:-3.0,pasta:4.5}},alcohol:{avgInflation:7.0,subcategories:{vodka:6.5,wine:7.5,beer:7.0,cigarettes:12.0}},clothing:{avgInflation:3.5,subcategories:{outer_wear:4.0,underwear:3.0,shoes:3.8,accessories:3.2}},housing:{avgInflation:4.8,subcategories:{rent:4.0,electricity:5.2,gas:5.7,water:4.9,heating:5.4,maintenance:4.5}},furniture:{avgInflation:3.8,subcategories:{furniture:4.3,appliances:3.3,tableware:3.8,textile:4.0}},health:{avgInflation:6.0,subcategories:{medicines:8.2,medical_services:5.5,dental:6.0,medical_devices:5.0}},transport:{avgInflation:7.5,subcategories:{cars:5.0,fuel:9.4,public_transport:6.5,taxi:6.0,car_parts:5.5,car_service:5.5}},communication:{avgInflation:1.8,subcategories:{mobile:1.5,internet:2.0,tv:2.2,phones:1.6}},recreation:{avgInflation:3.8,subcategories:{cinema:4.2,theater:3.5,sports:4.5,books:3.2,tourism:5.0}},education:{avgInflation:6.5,subcategories:{preschool:7.0,school:6.0,university:7.2,courses:6.2}},restaurants:{avgInflation:5.5,subcategories:{restaurants:6.0,cafes:5.2,fast_food:6.3,hotels:5.4}},other:{avgInflation:3.8,subcategories:{banking:3.2,insurance:4.0,beauty:6.0,jewelry:3.5}}},
+    2019:{avgInflation:3.0,food:{avgInflation:2.6,subcategories:{bread:4.0,meat:3.0,fish:3.5,milk:3.0,eggs:17.0,oil:3.0,fruits:2.0,vegetables:-0.5,sugar:8.5,pasta:3.5}},alcohol:{avgInflation:5.5,subcategories:{vodka:5.0,wine:6.0,beer:5.5,cigarettes:10.0}},clothing:{avgInflation:3.0,subcategories:{outer_wear:3.5,underwear:2.5,shoes:3.2,accessories:2.8}},housing:{avgInflation:4.2,subcategories:{rent:3.5,electricity:4.5,gas:5.0,water:4.3,heating:4.7,maintenance:4.0}},furniture:{avgInflation:3.5,subcategories:{furniture:4.0,appliances:3.0,tableware:3.5,textile:3.7}},health:{avgInflation:6.5,subcategories:{medicines:9.3,medical_services:6.0,dental:6.5,medical_devices:5.5}},transport:{avgInflation:4.5,subcategories:{cars:3.5,fuel:0.6,public_transport:7.5,taxi:5.5,car_parts:4.5,car_service:4.0}},communication:{avgInflation:2.5,subcategories:{mobile:2.0,internet:3.0,tv:3.2,phones:2.2}},recreation:{avgInflation:3.5,subcategories:{cinema:4.0,theater:3.2,sports:4.2,books:2.8,tourism:4.8}},education:{avgInflation:7.0,subcategories:{preschool:7.5,school:6.5,university:7.8,courses:6.8}},restaurants:{avgInflation:5.5,subcategories:{restaurants:6.0,cafes:5.2,fast_food:6.3,hotels:5.4}},other:{avgInflation:4.0,subcategories:{banking:3.4,insurance:4.3,beauty:6.5,jewelry:3.8}}},
+    2020:{avgInflation:4.9,food:{avgInflation:6.7,subcategories:{bread:7.0,meat:7.0,fish:7.5,milk:5.0,eggs:15.0,oil:26.0,fruits:5.5,vegetables:17.5,sugar:63.0,pasta:10.5}},alcohol:{avgInflation:5.0,subcategories:{vodka:4.5,wine:5.5,beer:5.0,cigarettes:9.5}},clothing:{avgInflation:3.5,subcategories:{outer_wear:4.0,underwear:3.0,shoes:3.8,accessories:3.2}},housing:{avgInflation:4.5,subcategories:{rent:3.8,electricity:4.8,gas:5.3,water:4.6,heating:5.0,maintenance:4.3}},furniture:{avgInflation:5.5,subcategories:{furniture:6.2,appliances:4.8,tableware:5.5,textile:5.8}},health:{avgInflation:9.5,subcategories:{medicines:10.7,medical_services:9.0,dental:9.5,medical_devices:8.5}},transport:{avgInflation:2.5,subcategories:{cars:2.0,fuel:-2.5,public_transport:5.0,taxi:3.0,car_parts:3.5,car_service:3.0}},communication:{avgInflation:2.5,subcategories:{mobile:2.0,internet:3.0,tv:3.2,phones:2.2}},recreation:{avgInflation:3.5,subcategories:{cinema:4.0,theater:3.2,sports:4.2,books:2.8,tourism:4.8}},education:{avgInflation:5.5,subcategories:{preschool:6.0,school:5.0,university:6.2,courses:5.2}},restaurants:{avgInflation:6.0,subcategories:{restaurants:6.5,cafes:5.7,fast_food:6.8,hotels:5.9}},other:{avgInflation:4.5,subcategories:{banking:3.8,insurance:4.8,beauty:7.0,jewelry:4.2}}},
+    2021:{avgInflation:8.39,food:{avgInflation:10.6,subcategories:{bread:12.0,meat:14.0,fish:10.5,milk:10.0,eggs:24.8,oil:27.5,fruits:7.5,vegetables:12.0,sugar:7.0,pasta:13.5}},alcohol:{avgInflation:8.5,subcategories:{vodka:8.0,wine:9.0,beer:8.5,cigarettes:14.0}},clothing:{avgInflation:6.0,subcategories:{outer_wear:6.8,underwear:5.2,shoes:6.5,accessories:5.5}},housing:{avgInflation:6.4,subcategories:{rent:5.5,electricity:6.8,gas:7.5,water:6.5,heating:7.0,maintenance:6.0}},furniture:{avgInflation:13.0,subcategories:{furniture:14.5,appliances:11.5,tableware:13.0,textile:13.5}},health:{avgInflation:8.0,subcategories:{medicines:9.1,medical_services:7.5,dental:8.0,medical_devices:7.0}},transport:{avgInflation:12.0,subcategories:{cars:16.0,fuel:11.7,public_transport:6.0,taxi:10.0,car_parts:10.5,car_service:8.0}},communication:{avgInflation:4.0,subcategories:{mobile:3.5,internet:4.5,tv:4.8,phones:3.8}},recreation:{avgInflation:7.5,subcategories:{cinema:8.0,theater:7.2,sports:8.5,books:6.5,tourism:9.0}},education:{avgInflation:8.0,subcategories:{preschool:8.5,school:7.5,university:8.8,courses:7.8}},restaurants:{avgInflation:8.5,subcategories:{restaurants:9.0,cafes:8.2,fast_food:9.3,hotels:8.3}},other:{avgInflation:6.5,subcategories:{banking:5.5,insurance:6.8,beauty:9.0,jewelry:6.2}}},
+    2022:{avgInflation:11.94,food:{avgInflation:14.8,subcategories:{bread:14.0,meat:14.5,fish:18.5,milk:14.0,eggs:12.0,oil:2.5,fruits:17.0,vegetables:20.0,sugar:47.0,pasta:22.0}},alcohol:{avgInflation:13.5,subcategories:{vodka:13.0,wine:14.0,beer:13.5,cigarettes:18.0}},clothing:{avgInflation:12.0,subcategories:{outer_wear:13.5,underwear:10.5,shoes:13.0,accessories:11.0}},housing:{avgInflation:5.2,subcategories:{rent:4.5,electricity:5.5,gas:6.0,water:5.3,heating:5.8,maintenance:5.0}},furniture:{avgInflation:15.5,subcategories:{furniture:17.0,appliances:14.0,tableware:15.5,textile:16.0}},health:{avgInflation:12.5,subcategories:{medicines:17.4,medical_services:11.5,dental:12.5,medical_devices:10.5}},transport:{avgInflation:18.0,subcategories:{cars:26.5,fuel:6.0,public_transport:9.5,taxi:15.0,car_parts:25.0,car_service:14.0}},communication:{avgInflation:10.0,subcategories:{mobile:9.0,internet:11.0,tv:11.5,phones:9.5}},recreation:{avgInflation:11.0,subcategories:{cinema:12.0,theater:10.5,sports:12.5,books:9.5,tourism:13.5}},education:{avgInflation:9.5,subcategories:{preschool:10.2,school:8.8,university:10.5,courses:9.0}},restaurants:{avgInflation:12.5,subcategories:{restaurants:13.5,cafes:12.0,fast_food:14.0,hotels:12.2}},other:{avgInflation:9.5,subcategories:{banking:8.0,insurance:10.0,beauty:12.5,jewelry:9.0}}},
+    2023:{avgInflation:7.42,food:{avgInflation:8.16,subcategories:{bread:10.0,meat:8.5,fish:10.5,milk:8.0,eggs:61.0,oil:3.5,fruits:7.0,vegetables:24.0,sugar:-23.0,pasta:7.5}},alcohol:{avgInflation:7.0,subcategories:{vodka:6.5,wine:7.5,beer:7.0,cigarettes:13.0}},clothing:{avgInflation:5.5,subcategories:{outer_wear:6.2,underwear:4.8,shoes:6.0,accessories:5.0}},housing:{avgInflation:8.33,subcategories:{rent:7.0,electricity:9.0,gas:9.5,water:8.5,heating:9.2,maintenance:8.0}},furniture:{avgInflation:6.5,subcategories:{furniture:7.2,appliances:5.8,tableware:6.5,textile:6.8}},health:{avgInflation:9.3,subcategories:{medicines:9.5,medical_services:9.2,dental:9.5,medical_devices:8.8}},transport:{avgInflation:10.0,subcategories:{cars:7.0,fuel:11.4,public_transport:8.5,taxi:12.0,car_parts:8.5,car_service:9.5}},communication:{avgInflation:4.5,subcategories:{mobile:4.0,internet:5.0,tv:5.2,phones:4.2}},recreation:{avgInflation:7.0,subcategories:{cinema:7.5,theater:6.7,sports:8.0,books:6.0,tourism:8.8}},education:{avgInflation:10.6,subcategories:{preschool:11.2,school:10.0,university:11.5,courses:10.2}},restaurants:{avgInflation:8.5,subcategories:{restaurants:9.0,cafes:8.2,fast_food:9.3,hotels:8.3}},other:{avgInflation:6.0,subcategories:{banking:5.0,insurance:3.1,beauty:8.5,jewelry:5.8}}},
+    2024:{avgInflation:9.52,food:{avgInflation:11.05,subcategories:{bread:11.0,meat:8.5,fish:12.5,milk:10.5,eggs:-2.0,oil:30.0,fruits:22.0,vegetables:22.0,sugar:-3.0,pasta:9.0}},alcohol:{avgInflation:8.3,subcategories:{vodka:7.5,wine:9.0,beer:8.5,cigarettes:6.0}},clothing:{avgInflation:6.0,subcategories:{outer_wear:6.8,underwear:5.2,shoes:6.5,accessories:5.5}},housing:{avgInflation:9.48,subcategories:{rent:9.0,electricity:9.94,gas:11.0,water:9.94,heating:9.94,maintenance:9.0}},furniture:{avgInflation:7.91,subcategories:{furniture:8.5,appliances:5.0,tableware:7.5,textile:7.8}},health:{avgInflation:10.48,subcategories:{medicines:10.61,medical_services:10.48,dental:11.0,medical_devices:9.5}},transport:{avgInflation:10.77,subcategories:{cars:9.0,fuel:11.13,public_transport:10.77,taxi:12.0,car_parts:10.0,car_service:10.5}},communication:{avgInflation:5.0,subcategories:{mobile:4.5,internet:5.5,tv:5.8,phones:4.2}},recreation:{avgInflation:9.0,subcategories:{cinema:9.5,theater:8.7,sports:10.0,books:7.5,tourism:10.5}},education:{avgInflation:10.6,subcategories:{preschool:11.2,school:10.0,university:11.5,courses:10.2}},restaurants:{avgInflation:11.52,subcategories:{restaurants:12.0,cafes:11.2,fast_food:12.5,hotels:11.0}},other:{avgInflation:6.5,subcategories:{banking:5.5,insurance:3.11,beauty:10.0,jewelry:7.0}}},
+    2025:{avgInflation:5.59,food:{avgInflation:5.24,subcategories:{bread:11.12,meat:5.0,fish:16.98,milk:4.5,eggs:-20.04,oil:8.0,fruits:-8.8,vegetables:-8.8,sugar:-6.41,pasta:-0.9}},alcohol:{avgInflation:11.12,subcategories:{vodka:10.5,wine:11.5,beer:11.0,cigarettes:7.08}},clothing:{avgInflation:3.5,subcategories:{outer_wear:4.0,underwear:3.0,shoes:3.8,accessories:3.2}},housing:{avgInflation:9.3,subcategories:{rent:8.5,electricity:9.3,gas:9.3,water:9.3,heating:9.3,maintenance:9.3}},furniture:{avgInflation:3.5,subcategories:{furniture:4.0,appliances:-4.96,tableware:3.5,textile:3.8}},health:{avgInflation:9.88,subcategories:{medicines:9.88,medical_services:9.3,dental:9.5,medical_devices:8.5}},transport:{avgInflation:9.3,subcategories:{cars:3.5,fuel:10.78,public_transport:9.3,taxi:9.5,car_parts:4.0,car_service:8.5}},communication:{avgInflation:3.0,subcategories:{mobile:2.8,internet:3.2,tv:3.5,phones:-8.53}},recreation:{avgInflation:9.3,subcategories:{cinema:9.5,theater:9.0,sports:9.8,books:6.5,tourism:9.3}},education:{avgInflation:9.3,subcategories:{preschool:9.5,school:9.0,university:9.5,courses:9.0}},restaurants:{avgInflation:9.3,subcategories:{restaurants:9.5,cafes:9.0,fast_food:9.8,hotels:9.0}},other:{avgInflation:6.5,subcategories:{banking:5.0,insurance:5.0,beauty:9.3,jewelry:6.0}}},
+    // 2026: ПРЕДВАРИТЕЛЬНЫЕ данные. Источники: Росстат (rosstat.gov.ru), Банк России, SberCIB Research.
+    // Годовая инфляция (г/г): январь — 6.0%, февраль — 5.91%, март — 5.87% (среднее I кв. ≈ 5.9%).
+    // Продовольствие: +5.4% г/г (январь), фрукты/овощи +7.4% г/г (март), яйца/молоко снижаются.
+    // Непродовольственные: +3.2% г/г (январь); бензин +2.3% г/г (март).
+    // Услуги: +9.9% г/г (январь), туризм сильный рост, ЖКУ +5.1% г/г.
+    // Данные актуальны на май 2026 г.
+    2026:{
+        avgInflation:5.9, // среднее за I кв. 2026 г/г, Росстат
+        food:{
+            avgInflation:5.4, // январь 2026, Росстат
+            subcategories:{
+                bread:5.5,       // умеренный рост, ниже 2025 г.
+                meat:4.5,
+                fish:8.0,        // продолжает расти
+                milk:2.5,        // замедление, снижение по данным апреля
+                eggs:-5.0,       // продолжение снижения (яйца дешевеют — SberCIB апрель)
+                oil:6.0,
+                fruits:7.4,      // фрукты/овощи +7.4% г/г (март, Trading Economics / Росстат)
+                vegetables:7.4,
+                sugar:2.0,       // умеренный рост после дефляции 2025
+                pasta:3.5
+            }
+        },
+        alcohol:{
+            avgInflation:7.5, // оценка на основе динамики акцизов и прошлых лет
+            subcategories:{vodka:7.0,wine:8.0,beer:7.5,cigarettes:7.5}
+        },
+        clothing:{
+            avgInflation:3.2, // непродовольственные +3.2% г/г (январь, Росстат)
+            subcategories:{outer_wear:3.5,underwear:2.8,shoes:3.3,accessories:3.0}
+        },
+        housing:{
+            avgInflation:5.1, // ЖКУ +5.1% г/г (март, Trading Economics / Росстат)
+            subcategories:{rent:5.5,electricity:5.1,gas:2.1,water:5.1,heating:5.1,maintenance:5.0}
+            // газ +2.1% г/г (март, Trading Economics)
+        },
+        furniture:{
+            avgInflation:3.0,
+            subcategories:{furniture:3.5,appliances:2.5,tableware:3.0,textile:3.2}
+        },
+        health:{
+            avgInflation:7.5, // оценка; лекарства — один из ключевых драйверов (январь)
+            subcategories:{medicines:8.5,medical_services:7.5,dental:7.8,medical_devices:6.5}
+        },
+        transport:{
+            avgInflation:4.0,
+            subcategories:{
+                cars:3.0,
+                fuel:2.3,        // бензин +2.3% г/г (март, Trading Economics / Росстат)
+                public_transport:6.5,
+                taxi:6.0,
+                car_parts:3.5,
+                car_service:5.5
+            }
+        },
+        communication:{
+            avgInflation:2.5,
+            subcategories:{mobile:2.5,internet:2.8,tv:3.0,phones:1.5}
+        },
+        recreation:{
+            avgInflation:9.9, // услуги +9.9% г/г (январь, Росстат); туризм — ключевой драйвер
+            subcategories:{cinema:8.0,theater:7.5,sports:8.5,books:5.5,tourism:15.0}
+            // туризм: зарубежный +12.85% м/м (февраль, SberCIB)
+        },
+        education:{
+            avgInflation:8.0, // оценка
+            subcategories:{preschool:8.5,school:7.5,university:8.5,courses:7.5}
+        },
+        restaurants:{
+            avgInflation:9.9, // услуги общепита следуют за общей динамикой услуг
+            subcategories:{restaurants:10.0,cafes:9.5,fast_food:10.5,hotels:9.5}
+        },
+        other:{
+            avgInflation:5.0,
+            subcategories:{banking:4.5,insurance:4.0,beauty:7.5,jewelry:5.0}
+        }
+    }
+};
+
+function createParticles() {
+    const bg = document.querySelector('.bg-animation');
+    for(let i=0;i<20;i++){
+        const p=document.createElement('div');p.className='particle';
+        p.style.width=(Math.random()*6+2)+'px';p.style.height=p.style.width;
+        p.style.left=(Math.random()*100)+'%';p.style.top=(Math.random()*100)+'%';
+        p.style.animationDelay=(Math.random()*15)+'s';p.style.animationDuration=(Math.random()*10+10)+'s';
+        bg.appendChild(p);
+    }
+}
+createParticles();
+
+function scrollToCalculator() {
+    document.getElementById('calculatorSection').scrollIntoView({behavior:'smooth'});
+    setTimeout(()=>document.getElementById('calculatorSection').classList.add('visible'),300);
+}
+const observer=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');})},{threshold:.1});
+observer.observe(document.getElementById('calculatorSection'));
+
+const translations = {
+    ru:{
+        heroTitle:'Личная Инфляция',heroSubtitle:'Узнайте, как изменение цен влияет именно на ваш бюджет',
+        heroStat1:'Товаров',heroStat2:'Категорий',heroStat3:'Инфляция I кв. 2026',
+        heroButton:'Рассчитать мою инфляцию',title:'Калькулятор личной инфляции',
+        subtitle:'Рассчитайте вашу персональную инфляцию на основе данных Росстата',
+        selectCategories:'Выберите товары и услуги',yourInflation:'Ваша личная инфляция',
+        periodLabel:'Период',totalWeight:'Общий бюджет',itemsSelected:'Выбрано товаров',
+        reset:'Сбросить',share:'Поделиться',reference:'Справочные материалы',
+        footerData:'Данные основаны на официальной статистике Федеральной службы государственной статистики (Росстат)',
+        footerUpdated:'Обновлено: Май 2026. Данные за 2026 г. — предварительные (январь–апрель, Росстат).',
+        higher:'выше средней',lower:'ниже средней',equal:'равна средней',
+        specify:'Укажите суммы в рублях',yearFrom:'От',
+        chartTitle:'Динамика инфляции по годам',legendAvg:'Средняя',legendPersonal:'Ваша',
+        totalInflationLabel:'Суммарная инфляция за период',
+        avgCumLabel:'Средняя Россия',persCumLabel:'Ваша',
+        lastYearLabel:'Посл. период (ваша)',avgLastYear:'Посл. период (Россия)'
+    },
+    en:{
+        heroTitle:'Personal Inflation',heroSubtitle:'Discover how price changes affect your budget',
+        heroStat1:'Items',heroStat2:'Categories',heroStat3:'Q1 2026 Inflation',
+        heroButton:'Calculate My Inflation',title:'Personal Inflation Calculator',
+        subtitle:'Calculate your personal inflation based on Rosstat data',
+        selectCategories:'Select goods and services',yourInflation:'Your Personal Inflation',
+        periodLabel:'Period',totalWeight:'Total Budget',itemsSelected:'Items Selected',
+        reset:'Reset',share:'Share',reference:'Reference Materials',
+        footerData:'Data based on official statistics of the Federal State Statistics Service (Rosstat)',
+        footerUpdated:'Updated: May 2026. 2026 data is preliminary (Jan–Apr, Rosstat).',
+        higher:'higher than average',lower:'lower than average',equal:'equal to average',
+        specify:'Specify amounts in rubles',yearFrom:'From',
+        chartTitle:'Inflation dynamics by year',legendAvg:'Average',legendPersonal:'Yours',
+        totalInflationLabel:'Total inflation for period',
+        avgCumLabel:'Russia avg',persCumLabel:'Yours',
+        lastYearLabel:'Last period (yours)',avgLastYear:'Last period (Russia)'
+    }
+};
+
+const categories=[
+    {id:'food',name:{ru:'Продукты питания',en:'Food Products'},icon:'🛒',subcategories:[
+        {id:'bread',name:{ru:'Хлеб и хлебобулочные изделия',en:'Bread and bakery products'}},
+        {id:'meat',name:{ru:'Мясо и мясопродукты',en:'Meat and meat products'}},
+        {id:'fish',name:{ru:'Рыба и морепродукты',en:'Fish and seafood'}},
+        {id:'milk',name:{ru:'Молоко и молочная продукция',en:'Milk and dairy products'}},
+        {id:'eggs',name:{ru:'Яйца',en:'Eggs'}},
+        {id:'oil',name:{ru:'Масло и жиры',en:'Oils and fats'}},
+        {id:'fruits',name:{ru:'Фрукты и ягоды',en:'Fruits and berries'}},
+        {id:'vegetables',name:{ru:'Овощи и плодоовощная продукция',en:'Vegetables'}},
+        {id:'sugar',name:{ru:'Сахар',en:'Sugar'}},
+        {id:'pasta',name:{ru:'Макаронные и крупяные изделия',en:'Pasta and cereals'}}
+    ]},
+    {id:'alcohol',name:{ru:'Алкоголь и табак',en:'Alcohol and Tobacco'},icon:'🍷',subcategories:[
+        {id:'vodka',name:{ru:'Водка',en:'Vodka'}},{id:'wine',name:{ru:'Вино',en:'Wine'}},
+        {id:'beer',name:{ru:'Пиво',en:'Beer'}},{id:'cigarettes',name:{ru:'Сигареты',en:'Cigarettes'}}
+    ]},
+    {id:'clothing',name:{ru:'Одежда и обувь',en:'Clothing and Footwear'},icon:'👔',subcategories:[
+        {id:'outer_wear',name:{ru:'Верхняя одежда',en:'Outerwear'}},{id:'underwear',name:{ru:'Нижнее белье',en:'Underwear'}},
+        {id:'shoes',name:{ru:'Обувь',en:'Footwear'}},{id:'accessories',name:{ru:'Аксессуары',en:'Accessories'}}
+    ]},
+    {id:'housing',name:{ru:'Жилье и ЖКХ',en:'Housing and Utilities'},icon:'🏠',subcategories:[
+        {id:'rent',name:{ru:'Аренда жилья',en:'Housing rent'}},{id:'electricity',name:{ru:'Электроэнергия',en:'Electricity'}},
+        {id:'gas',name:{ru:'Газ',en:'Gas'}},{id:'water',name:{ru:'Водоснабжение',en:'Water supply'}},
+        {id:'heating',name:{ru:'Отопление',en:'Heating'}},{id:'maintenance',name:{ru:'Содержание и ремонт',en:'Maintenance and repair'}}
+    ]},
+    {id:'furniture',name:{ru:'Мебель и товары для дома',en:'Furniture and Household Items'},icon:'🛋️',subcategories:[
+        {id:'furniture',name:{ru:'Мебель',en:'Furniture'}},{id:'appliances',name:{ru:'Бытовая техника и электротовары',en:'Household appliances'}},
+        {id:'tableware',name:{ru:'Посуда и столовые приборы',en:'Tableware and cutlery'}},{id:'textile',name:{ru:'Текстиль для дома',en:'Home textiles'}}
+    ]},
+    {id:'health',name:{ru:'Здравоохранение',en:'Healthcare'},icon:'💊',subcategories:[
+        {id:'medicines',name:{ru:'Лекарства',en:'Medicines'}},{id:'medical_services',name:{ru:'Медицинские услуги',en:'Medical services'}},
+        {id:'dental',name:{ru:'Стоматологические услуги',en:'Dental services'}},{id:'medical_devices',name:{ru:'Медицинские изделия',en:'Medical devices'}}
+    ]},
+    {id:'transport',name:{ru:'Транспорт',en:'Transport'},icon:'🚗',subcategories:[
+        {id:'cars',name:{ru:'Автомобили',en:'Cars'}},{id:'fuel',name:{ru:'Бензин',en:'Gasoline'}},
+        {id:'public_transport',name:{ru:'Общественный транспорт',en:'Public transport'}},{id:'taxi',name:{ru:'Такси',en:'Taxi'}},
+        {id:'car_parts',name:{ru:'Запчасти',en:'Car parts'}},{id:'car_service',name:{ru:'Ремонт и обслуживание',en:'Repair and maintenance'}}
+    ]},
+    {id:'communication',name:{ru:'Связь',en:'Communication'},icon:'📱',subcategories:[
+        {id:'mobile',name:{ru:'Мобильная связь',en:'Mobile services'}},{id:'internet',name:{ru:'Интернет',en:'Internet'}},
+        {id:'tv',name:{ru:'Телевидение',en:'Television'}},{id:'phones',name:{ru:'Телефоны и смартфоны',en:'Phones and smartphones'}}
+    ]},
+    {id:'recreation',name:{ru:'Отдых и культура',en:'Recreation and Culture'},icon:'🎭',subcategories:[
+        {id:'cinema',name:{ru:'Кинотеатры',en:'Cinemas'}},{id:'theater',name:{ru:'Театры',en:'Theaters'}},
+        {id:'sports',name:{ru:'Спортивные занятия',en:'Sports activities'}},{id:'books',name:{ru:'Книги',en:'Books'}},
+        {id:'tourism',name:{ru:'Туристические услуги',en:'Tourism services'}}
+    ]},
+    {id:'education',name:{ru:'Образование',en:'Education'},icon:'📚',subcategories:[
+        {id:'preschool',name:{ru:'Дошкольное образование',en:'Preschool education'}},{id:'school',name:{ru:'Школьное образование',en:'School education'}},
+        {id:'university',name:{ru:'Высшее образование',en:'Higher education'}},{id:'courses',name:{ru:'Курсы и тренинги',en:'Courses and trainings'}}
+    ]},
+    {id:'restaurants',name:{ru:'Рестораны и гостиницы',en:'Restaurants and Hotels'},icon:'🍽️',subcategories:[
+        {id:'restaurants',name:{ru:'Рестораны',en:'Restaurants'}},{id:'cafes',name:{ru:'Кафе',en:'Cafes'}},
+        {id:'fast_food',name:{ru:'Фастфуд',en:'Fast food'}},{id:'hotels',name:{ru:'Гостиницы',en:'Hotels'}}
+    ]},
+    {id:'other',name:{ru:'Прочие товары и услуги',en:'Other Goods and Services'},icon:'💼',subcategories:[
+        {id:'banking',name:{ru:'Банковские услуги',en:'Banking services'}},{id:'insurance',name:{ru:'Страхование',en:'Insurance'}},
+        {id:'beauty',name:{ru:'Парикмахерские услуги',en:'Hairdressing services'}},{id:'jewelry',name:{ru:'Ювелирные изделия',en:'Jewelry'}}
+    ]}
+];
+
+const referenceData={
+    ru:[
+        {title:'Что такое инфляция?',content:'Инфляция — это устойчивый рост общего уровня цен на товары и услуги в экономике. При инфляции на одну и ту же сумму денег через определенное время можно купить меньше товаров и услуг. Измеряется в процентах за период (обычно за год).'},
+        {title:'Данные за 2026 год — предварительные',content:'Данные за 2026 год основаны на официальных публикациях Росстата и Банка России за январь–апрель 2026 г. Используется годовая инфляция в годовом исчислении (г/г). Итоговые данные за 2026 год Росстат опубликует в январе 2027 г. По оценке аналитиков SberCIB (апрель 2026), инфляция по итогам 2026 года составит около 5,5%.'},
+        {title:'Что такое дефляция?',content:'Дефляция — снижение общего уровня цен, противоположность инфляции. В 2025–2026 гг. ряд товаров в России дешевеет: яйца, молоко (апрель 2026), плодоовощная продукция (сезонно). Длительная дефляция может сдерживать экономику.'},
+        {title:'Что такое ИПЦ (Индекс потребительских цен)?',content:'ИПЦ — показатель изменения среднего уровня цен на товары и услуги, которые покупают домашние хозяйства. В 2026 году Росстат рассчитывает ИПЦ на основе 558 позиций товаров и услуг (в 2025 году — 556). Является основным индикатором инфляции в России.'},
+        {title:'Инфляция в России по годам (Росстат)',content:'2019: 3.0% | 2020: 4.9% | 2021: 8.4% | 2022: 11.9% | 2023: 7.4% | 2024: 9.5% | 2025: 5.6% | 2026: ~5.9% (I кв., предварительно). В 2026 году инфляция продолжает замедляться.'},
+        {title:'Как рассчитывается личная инфляция?',content:'Личная инфляция рассчитывается на основе вашей индивидуальной потребительской корзины. Вы указываете суммы расходов на категории товаров, а калькулятор взвешивает темпы роста цен по этим категориям. Чем больше доля товара в тратах — тем сильнее его подорожание или подешевение влияет на вашу личную инфляцию.'}
+    ],
+    en:[
+        {title:'What is Inflation?',content:'Inflation is a sustained increase in the general price level of goods and services. With inflation, you can buy fewer goods for the same amount of money over time. Measured as a percentage over a specific period (usually a year).'},
+        {title:'2026 Data is Preliminary',content:'2026 data is based on official Rosstat and Bank of Russia publications for January–April 2026, using year-over-year (y/y) inflation rates. Final 2026 data will be published by Rosstat in January 2027. Analysts (SberCIB, April 2026) forecast full-year 2026 inflation at approximately 5.5%.'},
+        {title:'What is Deflation?',content:'Deflation is a decrease in the general price level. In 2025–2026, some items in Russia became cheaper: eggs, dairy (April 2026), and seasonal vegetables. Prolonged deflation can suppress economic activity.'},
+        {title:'What is CPI (Consumer Price Index)?',content:'CPI measures changes in the average price level of goods and services purchased by households. In 2026, Rosstat calculates CPI based on 558 items (556 in 2025). CPI is the main inflation indicator in Russia.'},
+        {title:'Russia Inflation by Year (Rosstat)',content:'2019: 3.0% | 2020: 4.9% | 2021: 8.4% | 2022: 11.9% | 2023: 7.4% | 2024: 9.5% | 2025: 5.6% | 2026: ~5.9% (Q1, preliminary). Inflation continues to decelerate in 2026.'},
+        {title:'How is Personal Inflation Calculated?',content:'Personal inflation is based on your individual consumer basket. You specify monthly spending on each category, and the calculator weights price changes accordingly. Items with larger budget shares have more impact on your personal inflation rate.'}
+    ]
+};
+
+function setLanguage(lang,event){
+    currentLang=lang;
+    document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('active'));
+    if(event&&event.target)event.target.classList.add('active');
+    document.querySelectorAll('[data-lang-key]').forEach(el=>{
+        const key=el.getAttribute('data-lang-key');
+        if(translations[lang][key])el.textContent=translations[lang][key];
+    });
+    updatePreliminaryNotice();
+    renderCategories();
+    renderReferenceMaterials();
+    calculatePersonalInflation();
+}
+
+function getInflationClass(val){
+    if(val<0)return 'inflation-deflation';
+    if(val>=10)return 'inflation-high';
+    if(val>=6)return 'inflation-medium';
+    return 'inflation-low';
+}
+
+function renderCategories(){
+    const container=document.getElementById('categoriesContainer');
+    container.innerHTML='';
+    const yearData=inflationDataByYear[yearTo];
+    const isPrelimYear=yearTo===PRELIMINARY_YEAR;
+    categories.forEach(category=>{
+        const div=document.createElement('div');
+        div.className='category-group';div.id=`cat-${category.id}`;
+        const cyd=yearData[category.id];
+        const avgInfl=cyd.avgInflation;
+        const prelimBadge=isPrelimYear?`<span class="preliminary-badge">⚠ ${currentLang==='ru'?'Предв.':'Prelim.'}</span>`:'';
+        const subsHTML=category.subcategories.map(sub=>{
+            const subInfl=cyd.subcategories[sub.id];
+            const cls=getInflationClass(subInfl);
+            const subId=`${category.id}-${sub.id}`;
+            if(amounts[subId]===undefined)amounts[subId]=0;
+            return `<div class="subcategory-item">
+                <div class="subcategory-info">
+                    <div class="subcategory-name">${sub.name[currentLang]}</div>
+                    <span class="subcategory-inflation ${cls}">${subInfl>0?'+':''}${subInfl.toFixed(1)}%</span>
+                </div>
+                <div class="weight-control">
+                    <div class="weight-input-wrapper">
+                        <input type="number" class="weight-input" id="amount-${subId}" min="0" step="1" value="${amounts[subId]}"
+                               onchange="updateAmount('${subId}',this.value)" placeholder="0">
+                        <span class="currency-sign">₽</span>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+        div.innerHTML=`<div class="category-header" onclick="toggleCategory('${category.id}')">
+            <div class="category-header-left">
+                <div class="category-icon">${category.icon}</div>
+                <div class="category-info">
+                    <h3>${category.name[currentLang]}${prelimBadge}</h3>
+                    <div class="category-avg-inflation">${currentLang==='ru'?'Средняя инфляция':'Average inflation'}: ${avgInfl>0?'+':''}${avgInfl.toFixed(2)}%</div>
+                </div>
+            </div>
+            <div class="expand-icon">▼</div>
+        </div>
+        <div class="subcategories">${subsHTML}</div>`;
+        container.appendChild(div);
+    });
+}
+
+function renderReferenceMaterials(){
+    const container=document.getElementById('referenceContainer');container.innerHTML='';
+    referenceData[currentLang].forEach((item,i)=>{
+        const div=document.createElement('div');div.className='reference-item';div.id=`ref-${i}`;
+        div.innerHTML=`<div class="reference-header" onclick="toggleReference(${i})">
+            <h4 class="reference-title">${item.title}</h4>
+            <div class="expand-icon">▼</div>
+        </div>
+        <div class="reference-content">${item.content}</div>`;
+        container.appendChild(div);
+    });
+}
+
+function toggleCategory(catId){document.getElementById(`cat-${catId}`).classList.toggle('expanded');}
+function toggleReference(i){document.getElementById(`ref-${i}`).classList.toggle('expanded');}
+function updateAmount(subId,value){amounts[subId]=Math.max(0,parseFloat(value)||0);calculatePersonalInflation();}
+
+function calculatePersonalInflation(){
+    const years=ALL_YEARS.filter(y=>y>=yearFrom&&y<=yearTo);
+    const totalBudget=getTotalBudget();
+    let itemsCount=0;
+    categories.forEach(cat=>cat.subcategories.forEach(sub=>{if((amounts[`${cat.id}-${sub.id}`]||0)>0)itemsCount++;}));
+    let compPersonal=1,compAvg=1;
+    years.forEach(y=>{
+        const yd=inflationDataByYear[y];
+        compAvg*=(1+yd.avgInflation/100);
+        if(totalBudget>0){
+            let wi=0;
+            categories.forEach(cat=>{
+                const cyd=yd[cat.id];
+                cat.subcategories.forEach(sub=>{
+                    const amt=amounts[`${cat.id}-${sub.id}`]||0;
+                    if(amt>0)wi+=(amt/totalBudget)*cyd.subcategories[sub.id];
+                });
+            });
+            compPersonal*=(1+wi/100);
+        }
+    });
+    const cumAvg=(compAvg-1)*100;
+    const cumPersonal=totalBudget>0?(compPersonal-1)*100:0;
+    const lastYd=inflationDataByYear[yearTo];
+    let lastYearPersonal=0;
+    if(totalBudget>0){
+        categories.forEach(cat=>{
+            const cyd=lastYd[cat.id];
+            cat.subcategories.forEach(sub=>{
+                const amt=amounts[`${cat.id}-${sub.id}`]||0;
+                if(amt>0)lastYearPersonal+=(amt/totalBudget)*cyd.subcategories[sub.id];
+            });
+        });
+    }
+    const difference=cumPersonal-cumAvg;
+    const lang=translations[currentLang];
+    const isPrelim=yearTo>=PRELIMINARY_YEAR;
+    document.getElementById('personalInflation').textContent=cumPersonal.toFixed(1)+'%';
+    document.getElementById('avgCumulativeVal').textContent=cumAvg.toFixed(1)+'%';
+    document.getElementById('personalCumulativeVal').textContent=cumPersonal.toFixed(1)+'%';
+    document.getElementById('lastYearPersonalVal').textContent=lastYearPersonal.toFixed(1)+'%'+(isPrelim?' *':'');
+    document.getElementById('avgRussiaValue').textContent=lastYd.avgInflation.toFixed(2)+'%'+(isPrelim?' *':'');
+    document.getElementById('periodValue').textContent=(yearFrom===yearTo?String(yearFrom):yearFrom+' – '+yearTo)+(isPrelim?' *':'');
+    document.getElementById('totalWeight').textContent=totalBudget.toLocaleString('ru-RU')+' ₽';
+    document.getElementById('itemsSelected').textContent=itemsCount;
+    let cmpText='';
+    if(totalBudget===0)cmpText=lang.specify;
+    else if(difference>0.05)cmpText=`↑ ${difference.toFixed(1)}% ${lang.higher}`;
+    else if(difference<-0.05)cmpText=`↓ ${Math.abs(difference).toFixed(1)}% ${lang.lower}`;
+    else cmpText=`= ${lang.equal}`;
+    document.getElementById('comparisonText').textContent=cmpText;
+    renderBars();
+}
+
+function resetWeights(){
+    Object.keys(amounts).forEach(k=>amounts[k]=0);
+    renderCategories();calculatePersonalInflation();
+}
+
+function shareResults(){
+    const totalBudget=getTotalBudget();
+    if(totalBudget===0){alert(currentLang==='ru'?'Сначала укажите суммы в рублях для товаров':'Please specify amounts in rubles first');return;}
+    const years=ALL_YEARS.filter(y=>y>=yearFrom&&y<=yearTo);
+    let cP=1,cA=1;
+    years.forEach(y=>{
+        const yd=inflationDataByYear[y];cA*=(1+yd.avgInflation/100);
+        let wi=0;
+        categories.forEach(cat=>{const cyd=yd[cat.id];cat.subcategories.forEach(sub=>{const amt=amounts[`${cat.id}-${sub.id}`]||0;if(amt>0)wi+=(amt/totalBudget)*cyd.subcategories[sub.id];});});
+        cP*=(1+wi/100);
+    });
+    const cumP=((cP-1)*100).toFixed(1);const cumA=((cA-1)*100).toFixed(1);
+    const period=yearFrom===yearTo?String(yearFrom):yearFrom+'–'+yearTo;
+    const hasPrelim=yearTo>=PRELIMINARY_YEAR;
+    const note=hasPrelim?(currentLang==='ru'?'\n* Данные за 2026 г. предварительные (Росстат, янв–апр 2026).':'\n* 2026 data is preliminary (Rosstat, Jan–Apr 2026).'):'';
+    const text=currentLang==='ru'
+        ?`Моя суммарная инфляция (${period}): ${cumP}%\nСредняя по России за тот же период: ${cumA}%\nМой бюджет: ${totalBudget.toLocaleString('ru-RU')} ₽${note}\n\nРассчитано на калькуляторе личной инфляции (данные Росстата)`
+        :`My total inflation (${period}): ${cumP}%\nRussia average for same period: ${cumA}%\nMy budget: ${totalBudget.toLocaleString('en-US')} ₽${note}\n\nCalculated with Personal Inflation Calculator (Rosstat data)`;
+    if(navigator.share){navigator.share({title:currentLang==='ru'?'Моя личная инфляция':'My Personal Inflation',text});}
+    else{navigator.clipboard.writeText(text);alert(currentLang==='ru'?'Результаты скопированы в буфер обмена!':'Results copied to clipboard!');}
+}
+
+// Init
+populateSelects();
+updatePreliminaryNotice();
+renderCategories();
+renderReferenceMaterials();
+calculatePersonalInflation();
+renderBars();
+</script>
+</body>
+</html>
